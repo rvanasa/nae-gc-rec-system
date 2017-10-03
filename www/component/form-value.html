@@ -8,6 +8,9 @@
 <div ng-if="$ctrl.type == 'select'" class="input-group">
 	<select class="form-control" ng-model="$ctrl.model" ng-change="$ctrl.onChange()" ng-options="option for option in $ctrl.schema.options"></select>
 </div>
+<div ng-if="$ctrl.type == 'number'" class="input-group">
+	<input type="number" class="form-control" ng-model="$ctrl.model" ng-change="$ctrl.onChange()">
+</div>
 <div ng-if="$ctrl.type == 'text'" class="input-group">
 	<input type="text" class="form-control" ng-model="$ctrl.model" ng-change="$ctrl.onChange()">
 </div>

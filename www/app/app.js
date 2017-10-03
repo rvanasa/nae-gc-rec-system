@@ -73,7 +73,7 @@ angular.module('app', ['ui.bootstrap'])
 		
 		if($ctrl.schemaValues) $ctrl.type = 'schema';
 		else if($ctrl.schema.options) $ctrl.type = 'select';
-		else $ctrl.type = 'text';
+		else $ctrl.type = $ctrl.schema.type || 'text';
 		
 		$ctrl.onChange = function()
 		{
@@ -111,7 +111,7 @@ angular.module('app', ['ui.bootstrap'])
 	schema: [{
 		id: 'grade',
 		name: 'Grade',
-		type: 'tel',
+		type: 'number',
 	}, {
 		id: 'state',
 		name: 'State',
