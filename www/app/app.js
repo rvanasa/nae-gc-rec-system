@@ -71,7 +71,9 @@ angular.module('app', ['ui.bootstrap'])
 		
 		$ctrl.schemaValues = Array.isArray($ctrl.schema) ? $ctrl.schema : $ctrl.schema.schema;
 		
-		$ctrl.type = $ctrl.schema.type || 'text';
+		if($ctrl.schemaValues) $ctrl.type = 'schema';
+		else if($ctrl.schema.options) $ctrl.type = 'select';
+		else $ctrl.type = 'text';
 		
 		$ctrl.onChange = function()
 		{

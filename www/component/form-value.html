@@ -1,10 +1,13 @@
 <big><label ng-bind="$ctrl.schema.name"></label></big>
-<div ng-if="$ctrl.schemaValues" class="container form-indent">
+<div ng-if="$ctrl.type == 'schema'" class="container form-indent">
 	<div ng-repeat="field in $ctrl.schemaValues">
 		<form-value schema="field" model="$ctrl.model[field.id]" change="$ctrl.onChange()"></form-value>
 		<br>
 	</div>
 </div>
-<div ng-if="!$ctrl.schemaValues" class="input-group">
-	<input type="{{$ctrl.type}}" class="form-control" ng-model="$ctrl.model" ng-change="$ctrl.onChange()">
+<div ng-if="$ctrl.type == 'select'" class="input-group">
+	<select class="form-control" ng-model="$ctrl.model" ng-change="$ctrl.onChange()" ng-options="option for option in $ctrl.schema.options"></select>
+</div>
+<div ng-if="$ctrl.type == 'text'" class="input-group">
+	<input type="text" class="form-control" ng-model="$ctrl.model" ng-change="$ctrl.onChange()">
 </div>
