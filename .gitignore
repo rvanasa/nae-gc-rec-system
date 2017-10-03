@@ -1,0 +1,4 @@
+# Ignore Python compiled files
+*pyc
+Python/.idea
+.idea
