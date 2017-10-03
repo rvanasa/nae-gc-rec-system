@@ -1,0 +1,105 @@
+@import url(https://fonts.googleapis.com/css?family=Asap+Condensed:300,400,700);
+
+@import url(components.css);
+
+html, body {
+	overflow-x: hidden;
+	width: 100%;
+}
+
+body {
+	font-family: 'Asap Condensed';
+	/*background: #F5F5F5;*/
+	color: #111;
+}
+
+:not(.ng-animate) {
+	transition: .2s ease-out;
+	transition-property: background, color, opacity, border, box-shadow, transform, max-width, max-height;
+}
+
+::selection {
+	background: #555;
+	color: #EEE;
+}
+
+.bg-content {
+	background: #F5F5F5;
+}
+
+.card {
+	border-radius: 0;
+	/*box-shadow: 0 3px 12px #CCC;*/
+	opacity: .9;
+	background: rgba(255, 255, 255, .5);
+	border: 2px solid #DDD;
+}
+
+.img-fluid {
+	width: 100%;
+}
+
+.btn {
+	cursor: pointer;
+}
+
+.btn, .input-group .form-control {
+	border-radius: 0;
+}
+
+.btn:hover .fa {
+	color: white !important;
+}
+
+.btn-secondary.active {
+	background: #FFF;
+	transform: scale(1.05);
+	box-shadow: 0 2px 8px #DDD;
+}
+
+.subtle {
+	opacity: .2;
+}
+
+.subtle:hover {
+	opacity: .5;
+}
+
+.list-group-item {
+	background: rgba(255, 255, 255, .2);
+	border: none;
+}
+
+.list-group-item:hover {
+	background: rgba(255, 255, 255, .3);
+}
+
+.clickable {
+	cursor: pointer;
+}
+
+.noselect {
+	cursor: default;
+}
+
+.noselect::selection, .noselect ::selection {
+	background: inherit;
+	color: inherit;
+}
+
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+ 
+::-webkit-scrollbar-track {
+	background: #DDD;
+}
+ 
+::-webkit-scrollbar-thumb {
+	background: #777;
+}
+ 
+::-webkit-scrollbar-thumb:HOVER {
+	background: #444;
+}
