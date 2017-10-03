@@ -1,6 +1,8 @@
+import os
+
 from recs import Recsystem
 
-BASE = 'C:\\users\\public\\sharedfolder\\recengine\\Qs'
+BASE = os.path.abspath('..') + '/data/Qs'
 grade = 4
 test = 'MCAS'
 

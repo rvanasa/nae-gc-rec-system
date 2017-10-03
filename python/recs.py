@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 from fuzzywuzzy import fuzz
@@ -139,13 +140,13 @@ class Recsystem:
     def _preprocess_data(self):
 
         # Read CSVs from dataset
-        df1 = pd.read_csv(self.base + '\\ElementarySchool\\Elementary-NDMC-Train.csv')
-        df2 = pd.read_csv(self.base + '\\ElementarySchool\\Elementary-NDMC-Test.csv')
-        df3 = pd.read_csv(self.base + '\\ElementarySchool\\Elementary-NDMC-Dev.csv')
+        df1 = pd.read_csv(self.base + '/ElementarySchool/Elementary-NDMC-Train.csv')
+        df2 = pd.read_csv(self.base + '/ElementarySchool/Elementary-NDMC-Test.csv')
+        df3 = pd.read_csv(self.base + '/ElementarySchool/Elementary-NDMC-Dev.csv')
 
-        df4 = pd.read_csv(self.base + '\\MiddleSchool\\Middle-NDMC-Train.csv')
-        df5 = pd.read_csv(self.base + '\\MiddleSchool\\Middle-NDMC-Test.csv')
-        df6 = pd.read_csv(self.base + '\\MiddleSchool\\Middle-NDMC-Dev.csv')
+        df4 = pd.read_csv(self.base + '/MiddleSchool/Middle-NDMC-Train.csv')
+        df5 = pd.read_csv(self.base + '/MiddleSchool/Middle-NDMC-Test.csv')
+        df6 = pd.read_csv(self.base + '/MiddleSchool/Middle-NDMC-Dev.csv')
 
         df = pd.concat([df1, df2, df3, df4, df5, df6])
 
