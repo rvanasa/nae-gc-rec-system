@@ -9,12 +9,16 @@
 		</div>
 		<div class="py-3">
 			<div ng-if="$ctrl.page == 'user'">
+				<div class="TEMP container text-muted">
+					<p>We can easily change this to give us extra user information to work with as needed.</p>
+				</div>
 				<form-value schema="$ctrl.userSchema" model="$ctrl.user" change="$ctrl.saveUser()"></form-value>
 				<hr>
 			</div>
 			<div ng-if="$ctrl.page == 'problem'">
 				<div class="container text-center">
 					<h5 class="my-3" ng-bind="$ctrl.problem.text"></h5>
+					<hr>
 					<div ng-if="!$ctrl.problem.response">
 						<div ng-repeat="option in $ctrl.problem.options">
 							<span class="btn btn-lg btn-secondary clickable d-block m-1" ng-model="$ctrl.problem.selected" uib-btn-radio="option.id" ng-bind="option.text"></span>
