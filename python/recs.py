@@ -79,7 +79,7 @@ class Recsystem:
 
     Methods
     -------
-    prep_next_q()
+    prep_next_q(answer)
         Ranks all questions by a similarity function then determines which question is most similar that the
         user has not answered. Then picks the index of the most similar question, and updates class variables
         accordingly.
@@ -87,6 +87,10 @@ class Recsystem:
     send_question()
         Sends the question and four answers in a format printable by the user. Currently a stub method- will
         probably have to convert Q + answer into JSON in this function.
+
+    send_q_stats()
+        Sends statistics about the question, including what percent of students
+        got it right in the user's grade category
 
 
     """
@@ -132,10 +136,12 @@ class Recsystem:
         self.B = ""
         self.C = ""
         self.D = ""
+        self.q_grade = 3
 
         # Define temporary variable index- which question currently being answered
         # index is initially set with a random value
         self.index = np.random.randint(0, self.df.shape[0])
+        self._update_by_index()
 
     def _preprocess_data(self):
 
@@ -155,10 +161,12 @@ class Recsystem:
         df = df[df.includesDiagram == 0]
 
         # 1)) Data preprocessing- we must standardize some of the test names
-        df.examName[df.examName == 'California Standards Test - Science'] = 'California Standards Test'
-        df.examName[df.examName == 'Maryland School Assessment - Science'] = 'Maryland School Assessment'
-        df.examName[df.examName == 'Alaska Department of Education & Early Development'] = 'Alaska Department of Education and Early Development'
-        df.examName[df.examName == 'Alaska Dept. of Education & Early Development'] = 'Alaska Department of Education and Early Development'
+        df.loc[df.examName == 'California Standards Test - Science', 'examName'] = 'California Standards Test'
+        df.loc[df.examName == 'Maryland School Assessment - Science', 'examName'] = 'Maryland School Assessment'
+        df.loc[df.examName == 'Alaska Department of Education & Early Development',
+               'examName'] = 'Alaska Department of Education and Early Development'
+        df.loc[df.examName == 'Alaska Dept. of Education & Early Development',
+               'examName'] = 'Alaska Department of Education and Early Development'
 
         # 2)) we split each question to question and answers
         df['question'] = df['question'].astype(str)
@@ -194,34 +202,36 @@ class Recsystem:
             B, qs = split_answer(qs, '2')
             A, qs = split_answer(qs, '1')
 
+        A = "A. " + A.strip()
+        B = "B. " + B.strip()
+        C = "C. " + C.strip()
+        if isinstance(D, str):
+            D = "D. " + D.strip()
+
         return pd.Series({"questionID": id, "question":qs, "A": A, "B": B, "C":C, "D":D})
 
     # 3)) We create toy distributions of student responses by grade
-    def _correct(self, id):
-        grade = self.grade
-        distribution = np.zeros(self.grade_range) # grades 3 - 9
+    def _correct(self, q_grade, id):
+        grade = int(q_grade)
         qs_answered = np.random.randint(1, 501, self.grade_range) # students in each grade who answered question
 
         # First we get a random mean between [10, 95]
-        mu = 85*np.random.rand() + 10
+        mu = 75*np.random.rand() + 20
 
         # Then we get a random standard deviation between [5, 20]
         sigma = 15*np.random.rand() + 5
 
+        # Then we create a normal distribution, and take 7 random numbers, sort them
+        # and return them as probabilities
+        probs = np.random.normal(mu, sigma, 1000)
+        np.random.shuffle(probs)
+        distribution = probs[0:self.grade_range]
+        distribution = np.sort(distribution)
+
         # Then we generate random numbers for each grade- mu is the grade of q
         series = {}
-        for n in range(0, self.grade_range):
-            if n + self.min_grade == grade:
-                distribution[n] = mu
-            else:
-                found_num = False
-                while not found_num:
-                    randx = np.random.normal(mu, sigma)
-                    max_rand = mu + (n - grade + self.min_grade) * sigma * 0.4
-                    if randx < max_rand and (randx > distribution[n - 1] or n==0):
-                        distribution[n] = np.clip(randx, 1, 99)
-                        found_num = True
 
+        for n in range(0, self.grade_range):
             series[str(n + self.min_grade)] = distribution[n]
             series[str(n + self.min_grade) + '_users'] = qs_answered[n]
         series['questionID'] = id
@@ -243,19 +253,21 @@ class Recsystem:
         percentage_weight = 1
         q_percent = row[str(self.grade)]
         q_answers = row[str(self.grade) + "_users"]
-        similarity_last = abs(q_percent - self.last_percentage) * percentage_weight / float(100)
-        similarity_percent = abs(q_percent - self.percentage) * percentage_weight * self.qs_answered / float(q_answers*100)
-        difference_score = similarity_last + similarity_percent + difference_score
+        difference_last = 1 - abs(q_percent - self.last_percentage) * percentage_weight / float(100)
+        difference_percent = 1 - abs(q_percent - self.percentage) * percentage_weight * self.qs_answered / float(100)
+        difference_score = difference_last + difference_percent + difference_score
 
         # compare last question by token sort ratio
-        similarity_q = fuzz.token_sort_ratio(row['question'], self.last_question) / float(100)
-        question_weight = 1
-        difference_score += question_weight * similarity_q
+        difference_q = 1 - fuzz.token_sort_ratio(row['question'], self.last_question) / float(100)
+        question_weight = 100
+        difference_score += question_weight * difference_q
 
         # Compare test type
-        similarity_test = fuzz.ratio(row['examName'], self.test_type) / float(100)
+        difference_test = 1
+        if self.test_type == row['examName']:
+            difference_test = 0
         test_weight = 1
-        difference_score += similarity_test * test_weight
+        difference_score += difference_test * test_weight
 
         return difference_score
 
@@ -322,8 +334,14 @@ class Recsystem:
         # Update question IDs
         self.answered_questions.append(self.df.iloc[[self.index]]['questionID']._values[0])
 
+        # Update question grade
+        self.q_grade = self.df.iloc[[self.index]]['schoolGrade']._values[0]
+
     def send_question(self):
         return self.last_question, self.A, self.B, self.C, self.D
+
+    def send_q_stats(self):
+        return self.last_percentage
 
 
 # 5)) We create an API on which to get / send answers
