@@ -19,24 +19,24 @@
 				<div class="container text-center">
 					<h5 class="my-3" ng-bind="$ctrl.problem.text"></h5>
 					<hr>
-					<div ng-if="!$ctrl.problem.response">
+					<div ng-if="!$ctrl.problem.result">
 						<div ng-repeat="option in $ctrl.problem.options">
 							<span class="btn btn-lg btn-secondary clickable d-block m-1" ng-model="$ctrl.problem.selected" uib-btn-radio="option.id" ng-bind="option.text"></span>
 						</div>
 					</div>
-					<div ng-if="$ctrl.problem.response">
+					<div ng-if="$ctrl.problem.result">
 						<div class="text-center">
 							<div ng-repeat="option in $ctrl.problem.options">
-								<h4 ng-bind="option.text" ng-class="$ctrl.problem.response.correct == option.id ? 'text-success' : $ctrl.problem.selected == option.id ? 'text-danger' : ''"></h4>
+								<h4 ng-bind="option.text" ng-class="$ctrl.problem.result.correct == option.id ? 'text-success' : $ctrl.problem.selected == option.id ? 'text-danger' : ''"></h4>
 							</div>
 						</div>
 						<hr class="my-3">
-						<h4 class="text-muted" ng-if="$ctrl.problem.response.correct == $ctrl.problem.selected">Correct!</h4>
-						<h4 class="text-muted" ng-if="$ctrl.problem.response.correct != $ctrl.problem.selected">Incorrect.</h4>
+						<h4 class="text-muted" ng-if="$ctrl.problem.result.correct == $ctrl.problem.selected">Correct!</h4>
+						<h4 class="text-muted" ng-if="$ctrl.problem.result.correct != $ctrl.problem.selected">Incorrect.</h4>
 					</div>
 					<hr>
-					<span class="btn btn-primary btn-lg d-block" ng-if="$ctrl.problem.selected != undefined && !$ctrl.problem.response" ng-click="$ctrl.submit()">Submit</span>
-					<span class="btn btn-outline-primary btn-lg d-block" ng-if="$ctrl.problem.response" ng-click="$ctrl.nextQuestion()">Next Question</span>
+					<span class="btn btn-primary btn-lg d-block" ng-if="$ctrl.problem.selected != undefined && !$ctrl.problem.result" ng-click="$ctrl.submit()">Submit</span>
+					<span class="btn btn-outline-primary btn-lg d-block" ng-if="$ctrl.problem.result" ng-click="$ctrl.nextQuestion()">Next Question</span>
 				</div>
 			</div>
 		</div>

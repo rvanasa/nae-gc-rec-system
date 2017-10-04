@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, request, send_file
 
 from recs import Recsystem
@@ -31,7 +32,24 @@ def get_question():
 	# retrieve user from query string, TODO migrate to using authentication
 	user_id = request.args.get('user')
 	
-	# ...
+	print user_id
+	
+	return json.dumps({
+		'text': 'What color is the sky?',
+		'options': [{
+			'id': 'A',
+			'text': 'Sarcoline'
+		}, {
+			'id': 'B',
+			'text': 'Smaragdine'
+		}, {
+			'id': 'C',
+			'text': 'Glaucous'
+		}, {
+			'id': 'D',
+			'text': 'Coquelicot'
+		}]
+	})
 
 
 @app.route('/api/answer', methods=['POST'])
@@ -41,4 +59,6 @@ def post_answer():
 	# letter corresponding to selected answer (e.g. A, B, C)
 	selected = request.args.get('selected')
 	
-	# ...
+	return json.dumps({
+		'correct': 'C'
+	})

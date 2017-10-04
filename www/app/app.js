@@ -3,13 +3,13 @@ angular.module('app', ['ui.bootstrap'])
 
 .component('app', {
 	templateUrl: 'component/app.html',
-	controller(Storage, UserSchema)
+	controller(API, Storage, UserSchema)
 	{
 		var $ctrl = this;
 		
 		$ctrl.userSchema = UserSchema;
 		
-		$ctrl.user = Storage.load('user') || {};
+		$ctrl.user = Storage.load('user') || {id: '12345'};
 		$ctrl.saveUser = function()
 		{
 			Storage.save('user', $ctrl.user);
@@ -22,38 +22,17 @@ angular.module('app', ['ui.bootstrap'])
 			Storage.save('page', $ctrl.page);
 		}
 		
-		$ctrl.problem = {
-			id: '12345',
-			text: 'What color are leaves?',
-			options: [{
-				id: 'A',
-				text: 'Green',
-			}, {
-				id: 'B',
-				text: 'Red',
-			}, {
-				id: 'C',
-				text: 'Black',
-			}, {
-				id: 'D',
-				text: 'White',
-			}, {
-				id: 'E',
-				text: 'Depends?',
-			}],
-		};
+		$ctrl.nextQuestion = function()
+		{
+			API.getQuestion($ctrl.user)
+				.then(problem => $ctrl.problem = problem);
+		}
+		$ctrl.nextQuestion();
 		
 		$ctrl.submit = function()
 		{
-			$ctrl.problem.response = {
-				correct: 'E',
-			};
-		}
-		
-		$ctrl.nextQuestion = function()
-		{
-			$ctrl.problem.selected = null;
-			$ctrl.problem.response = null;
+			API.submitAnswer($ctrl.user, $ctrl.problem.selected)
+				.then(result => $ctrl.problem.result = result);
 		}
 	}
 })
@@ -82,9 +61,28 @@ angular.module('app', ['ui.bootstrap'])
 	}
 })
 
-.factory('API', function()
+.factory('API', function($http)
 {
+	return {
+		getQuestion(user)
+		{
+			return wrap($http.get('/api/question' + getQueryString({user: user.id})));
+		},
+		submitAnswer(user, selected)
+		{
+			return wrap($http.post('/api/answer' + getQueryString({user: user.id, selected})));
+		},
+	};
 	
+	function getQueryString(map)
+	{
+		return '?' + Object.keys(map).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(map[key])).join('&');
+	}
+	
+	function wrap(promise)
+	{
+		return promise.then(res => res.data);
+	}
 })
 
 .factory('Storage', function($window)
@@ -92,17 +90,20 @@ angular.module('app', ['ui.bootstrap'])
 	return {
 		load(key)
 		{
-			var data = $window.localStorage.getItem(key);
-			if(data) return JSON.parse(data);
+			var value = $window.localStorage.getItem(key);
+			if(value) return JSON.parse(value);
 		},
-		save(key, data)
+		save(key, value)
 		{
-			$window.localStorage.setItem(key, data != null ? JSON.stringify(data) : '');
+			$window.localStorage.setItem(key, value != null ? JSON.stringify(value) : '');
 		},
 	};
 })
 
 .value('UserSchema', [{
+	id: 'id',
+	name: 'User ID',
+}, {
 	id: 'name',
 	name: 'Name',
 }, {
