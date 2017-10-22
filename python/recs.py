@@ -1,7 +1,7 @@
-import os
 import pandas as pd
 import numpy as np
-from fuzzywuzzy import fuzz
+import sqlite3
+import spacy
 
 
 class Recsystem:
@@ -92,13 +92,27 @@ class Recsystem:
         Sends statistics about the question, including what percent of students
         got it right in the user's grade category
 
+    update_sql()
+        Sends user information that has been updated after each question to the database
+
+    Reads
+    -----
+    questions : sql table
+        Contains `self.df` in SQL table form. Used to store preprocessed data.
+
+    users : sql table
+        Contains user variable info for each user. Some sections are mutable, unlike
+        `questions` which is generally immutable
 
     """
 
-    def __init__(self, BASE, grade, test_type):
+    def __init__(self, BASE, username):
 
         # Define dataset of questions
         self.base = BASE
+
+        # Define word tokenizer
+        self.nlp = spacy.load('en')
 
         # Define static values of dataset
         self.grade_range = 7  # grades 3 - 9 inclusive
@@ -112,23 +126,40 @@ class Recsystem:
                                'NYSEDREGENTS', 'Ohio Achievement Tests', 'TAKS',
                                'Virginia Standards of Learning - Science', 'AMP']
 
-        # Check grade and test_type
-        if grade < 3 or grade > 9:
-            raise ValueError("Grade level not supported")
+        # Preprocess dataset and read into sql if not done already
+        self.conn = sqlite3.connect('recs.db')
+        self.c = self.conn.cursor()
+        self.c.execute("SELECT count(*) FROM sqlite_master WHERE type='table'")
+        tables = self.c.fetchall()[0][0]
+        if tables < 2:
+            self.df = self._preprocess_data()
+            print("Read new data to SQL")
+        self.df = pd.read_sql('SELECT * FROM questions;', self.conn)
+        print("Read SQL")
 
-        if test_type not in self.all_test_types:
-            raise ValueError("Test type not supported")
-
-        # Preprocess dataset
-        self.df = self._preprocess_data()
+        self.username = username
+        try:
+            user = pd.read_sql('SELECT * FROM users WHERE username=' + '"' + self.username +'";', self.conn)
+        except pd.io.sql.DatabaseError:
+            raise ValueError("Username NOT found")
 
         # Define user variables
-        self.grade = grade
-        self.last_percentage = 0.0
-        self.qs_answered = 0
-        self.percentage = 0.0
-        self.test_type = test_type
-        self.answered_questions = []
+        self.grade = int(user['grade'][0])
+        self.last_percentage = 0
+        self.qs_answered = int(user['qs_answered'][0])
+        self.percentage = float(user['percentage'][0])
+        self.test_type = user['test_type'][0]
+        if user['answered_questions'][0] == '[]':
+            self.answered_questions = []
+        else:
+            self.answered_questions = user['answered_questions'][0].split('____')
+
+        # Check grade and test_type
+        if self.grade < self.min_grade or self.grade > self.max_grade:
+            raise ValueError("Grade level not supported")
+
+        if self.test_type not in self.all_test_types:
+            raise ValueError("Test type not supported")
 
         # Define question and response
         self.last_question = ""
@@ -136,7 +167,7 @@ class Recsystem:
         self.B = ""
         self.C = ""
         self.D = ""
-        self.q_grade = 3
+        self.q_grade = -1
 
         # Define temporary variable index- which question currently being answered
         # index is initially set with a random value
@@ -155,6 +186,8 @@ class Recsystem:
         df6 = pd.read_csv(self.base + '/MiddleSchool/Middle-NDMC-Dev.csv')
 
         df = pd.concat([df1, df2, df3, df4, df5, df6])
+        del df['subject']
+        del df['category']
 
         # Remove all diagram questions and free responses
         df = df[df.isMultipleChoiceQuestion == 1]
@@ -169,16 +202,28 @@ class Recsystem:
                'examName'] = 'Alaska Department of Education and Early Development'
 
         # 2)) we split each question to question and answers
-        df['question'] = df['question'].astype(str)
         df7 = df.apply(lambda row: self._answers(row['question'], row['questionID']), axis=1)
         del df['question']
         df = df.merge(df7)
 
+
         # 3)) We create a toy distribution for each question based on the grade the question was assigned
         dist_df = df.apply(lambda row: self._correct(row['schoolGrade'], row['questionID']), axis=1)
         df = df.merge(dist_df)
+        df['questionID'] = df['questionID'].str.decode('utf-8')
+        df['originalQuestionID'] = df['originalQuestionID'].str.decode('utf-8')
+        df['AnswerKey'] = df['AnswerKey'].str.decode('utf-8')
+        df['examName'] = df['examName'].str.decode('utf-8')
+        df['year'] = df['year'].str.decode('utf-8')
+        df['question'] = df['question'].str.decode('utf-8')
+        df['A'] = df['A'].str.decode('utf-8')
+        df['B'] = df['B'].str.decode('utf-8')
+        df['C'] = df['C'].str.decode('utf-8')
+        df['D'] = df['D'].str.decode('utf-8')
 
-        return df
+        df.head()
+
+        df.to_sql("questions", self.conn, if_exists="replace")
 
     def _answers(self, qs, id):
 
@@ -258,7 +303,30 @@ class Recsystem:
         difference_score = difference_last + difference_percent + difference_score
 
         # compare last question by token sort ratio
-        difference_q = 1 - fuzz.token_sort_ratio(row['question'], self.last_question) / float(100)
+        q1 = self.nlp(self.last_question)
+        q2 = self.nlp(row['question'])
+        word_list_1 = []
+        word_list_2 = []
+        for word in q1:
+            if word.pos_ == 'NOUN':
+                word_list_1.append(word.text)
+
+        for word in q2:
+            if word.pos_ == 'NOUN':
+                word_list_2.append(word.text)
+
+        tokenized_q1 = " ".join(sorted(word_list_1))
+        tokenized_q2 = " ".join(sorted(word_list_2))
+
+        tk_q1 = self.nlp(tokenized_q1)
+
+        # TypeError occurs if sentence has no nouns
+        try:
+            sim = tk_q1.similarity(self.nlp(tokenized_q2))
+        except TypeError:
+            sim = 0
+
+        difference_q = 1 - sim
         question_weight = 100
         difference_score += question_weight * difference_q
 
@@ -295,7 +363,9 @@ class Recsystem:
                 self.index = n
             n += 1
 
+        # Update class and db information
         self._update_by_index()
+        self._update_sql()
 
     # 7)) We update student  / db statistics based on answered question
     def _updates(self, answer):
@@ -343,7 +413,22 @@ class Recsystem:
     def send_q_stats(self):
         return self.last_percentage
 
+    def _update_sql(self):
+        sql_command = "UPDATE users SET grade="
+        sql_command += str(self.grade)
+        sql_command += ", qs_answered="
+        sql_command += str(self.qs_answered)
+        sql_command += ", percentage="
+        sql_command += str(self.percentage)
+        sql_command += ", answered_questions="
+        sql_command += '"' + '____'.join(self.answered_questions) + '"'
+        sql_command += " WHERE username="
+        sql_command += '"' + self.username + '";'
 
-# 5)) We create an API on which to get / send answers
-# Get call to send a question
-# Post call to get answer from user and update db
+        self.c.execute(sql_command)
+        self.conn.commit()
+
+    # Ends sql connection
+    def _end_session(self):
+        self.conn.close()
+

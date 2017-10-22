@@ -1,12 +1,20 @@
 import os
 
+"""
+TODO:
+    Create New USER sqlite integration, Add Password option?
+    Connect to flask fully, test API alone
+    Connect to frontends
+    Look through some of the weirder errors (negative percentage corrects?)
+"""
+
 from recs import Recsystem
 
 BASE = os.path.abspath('..') + '/data/Qs'
 grade = 4
 test = 'MCAS'
 
-rc = Recsystem(BASE, grade, test)
+rc = Recsystem(BASE, 'ttrojan77')
 
 q, a, b, c, d = rc.send_question()
 last_percent = rc.send_q_stats()
