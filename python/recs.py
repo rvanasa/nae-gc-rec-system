@@ -7,7 +7,7 @@ import spacy
 class Recsystem:
 
     """
-    Recsystem(BASE, grade, test_type)
+    Recsystem(BASE, username)
 
     Recommendation system (draft) class. Contains methods needed to
     preprocess data and process responses to user input.
@@ -17,14 +17,8 @@ class Recsystem:
     BASE : string
         The absolute directory where the Allen AI CSV files are stored.
 
-    grade : int
-        The user's entered grade. Can be from grade 3 to 9 currently.
-
     test_type : string
-        The test the user would like to study for ideally. While our
-        system currently will give questions typically from outside of the
-        exam, if two questions are equally weighted one being of the same test
-        type will weight towards that specified by test_type.
+        The username of the user accessing the api
 
     Attributes
     ----------
@@ -88,6 +82,9 @@ class Recsystem:
         Sends the question and four answers in a format printable by the user. Currently a stub method- will
         probably have to convert Q + answer into JSON in this function.
 
+    send_user_stats()
+        Sends the variable user stats- such as percentage correct and number of questions answered
+
     send_q_stats()
         Sends statistics about the question, including what percent of students
         got it right in the user's grade category
@@ -106,7 +103,7 @@ class Recsystem:
 
     """
 
-    def __init__(self, BASE, username):
+    def __init__(self, BASE):
 
         # Define dataset of questions
         self.base = BASE
@@ -133,33 +130,7 @@ class Recsystem:
         tables = self.c.fetchall()[0][0]
         if tables < 2:
             self.df = self._preprocess_data()
-            print("Read new data to SQL")
         self.df = pd.read_sql('SELECT * FROM questions;', self.conn)
-        print("Read SQL")
-
-        self.username = username
-        try:
-            user = pd.read_sql('SELECT * FROM users WHERE username=' + '"' + self.username +'";', self.conn)
-        except pd.io.sql.DatabaseError:
-            raise ValueError("Username NOT found")
-
-        # Define user variables
-        self.grade = int(user['grade'][0])
-        self.last_percentage = 0
-        self.qs_answered = int(user['qs_answered'][0])
-        self.percentage = float(user['percentage'][0])
-        self.test_type = user['test_type'][0]
-        if user['answered_questions'][0] == '[]':
-            self.answered_questions = []
-        else:
-            self.answered_questions = user['answered_questions'][0].split('____')
-
-        # Check grade and test_type
-        if self.grade < self.min_grade or self.grade > self.max_grade:
-            raise ValueError("Grade level not supported")
-
-        if self.test_type not in self.all_test_types:
-            raise ValueError("Test type not supported")
 
         # Define question and response
         self.last_question = ""
@@ -169,10 +140,48 @@ class Recsystem:
         self.D = ""
         self.q_grade = -1
 
+        # Define user vars
+        self.last_percentage = 0
+
+        # Define empty user vars
+        self.username = None
+        self.grade = None
+        self.qs_answered = None
+        self.percentage = None
+        self.test_type = None
+        self.answered_questions = None
+
         # Define temporary variable index- which question currently being answered
-        # index is initially set with a random value
+        # index is initially a random question that the user has not answered
+        self.index = None
+
+        self.conn.close()
+
+    def init_user(self, username):
+        self.conn = sqlite3.connect('recs.db')
+        self.c = self.conn.cursor()
+        self.username = username
+        try:
+            user = pd.read_sql('SELECT * FROM users WHERE username=' + '"' + self.username + '";', self.conn)
+        except pd.io.sql.DatabaseError:
+            raise ValueError("Username NOT found")
+
+        # Define user variables
+        self.grade = int(user['grade'][0])
+        self.qs_answered = int(user['qs_answered'][0])
+        self.percentage = float(user['percentage'][0])
+        self.test_type = user['test_type'][0]
+        if user['answered_questions'][0] == '[]':
+            self.answered_questions = []
+        else:
+            self.answered_questions = user['answered_questions'][0].split('____')
+
         self.index = np.random.randint(0, self.df.shape[0])
+        while self.df.iloc[[self.index]]['question']._values[0] in self.answered_questions:
+            self.index = np.random.randint(0, self.df.shape[0])
         self._update_by_index()
+
+        self.conn.close()
 
     def _preprocess_data(self):
 
@@ -410,10 +419,16 @@ class Recsystem:
     def send_question(self):
         return self.last_question, self.A, self.B, self.C, self.D
 
+    def send_user_stats(self):
+        return self.percentage, self.qs_answered
+
     def send_q_stats(self):
         return self.last_percentage
 
     def _update_sql(self):
+        self.conn = sqlite3.connect('recs.db')
+        self.c = self.conn.cursor()
+
         sql_command = "UPDATE users SET grade="
         sql_command += str(self.grade)
         sql_command += ", qs_answered="
@@ -427,6 +442,7 @@ class Recsystem:
 
         self.c.execute(sql_command)
         self.conn.commit()
+        self.conn.close()
 
     # Ends sql connection
     def _end_session(self):

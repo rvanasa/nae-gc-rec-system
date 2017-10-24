@@ -9,10 +9,10 @@ WWW_BASE = DIR + '/www'
 QS_BASE = DIR + '/data/Qs'
 
 # maybe we could pass these as request parameters eventually
-grade = 4
-test = 'MCAS'
+username = 'ttrojan77'
 
-rc = Recsystem(QS_BASE, grade, test)
+rc = Recsystem(DIR)
+rc.init_user(username)
 
 app = Flask(__name__)
 
@@ -64,3 +64,7 @@ def post_answer():
     return json.dumps({
         'correct': selected
     })
+
+
+if __name__ == '__main__':
+    app.run()
